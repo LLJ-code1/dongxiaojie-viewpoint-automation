@@ -1,0 +1,37 @@
+# macOS / Python / Swift cache
+.DS_Store
+__pycache__/
+*.py[cod]
+.swift-module-cache/
+.swift-module-cache.*/
+02_OCR工作流/.swift-module-cache/
+02_OCR工作流/.swift-module-cache.*/
+
+# Raw screenshots and OCR/generated outputs
+03_整理输出/
+02_OCR工作流/待整理截图/*
+!02_OCR工作流/待整理截图/.gitkeep
+02_OCR工作流/整理结果/*
+!02_OCR工作流/整理结果/.gitkeep
+02_OCR工作流/ocr_crops/
+02_OCR工作流/debug_crops/
+02_OCR工作流/overview_*.jpg
+
+# Local debug helpers not part of the maintained MVP workflow
+02_OCR工作流/make_ocr_crops.py
+02_OCR工作流/ocr.swift
+02_OCR工作流/ocr_batch.swift
+
+# Private/local artifacts
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+*.tsv
+*.jpg
+*.jpeg
+*.png
+*.heic
+*.tif
+*.tiff
+

@@ -1,0 +1,1402 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>董小姐观点表格版</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #f7f8fa;
+      color: #1f2937;
+      font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    h1 { margin: 0; font-size: 18px; font-weight: 650; color: #111827; }
+    .head-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .stats { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; color: #6b7280; }
+    .stat-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 4px; background: #f3f4f6; color: #6b7280; white-space: nowrap; }
+    .stat-pill.strong { background: #eef2ff; color: #1d4ed8; }
+    .head-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .legend-item { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; }
+    .legend-dot { width: 7px; height: 7px; border-radius: 2px; display: inline-block; }
+    button, .upload-btn {
+      padding: 5px 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 5px;
+      background: #fff;
+      color: #4b5563;
+      font-size: 12px;
+      cursor: pointer;
+      transition: border-color .15s, color .15s;
+    }
+    button:hover, .upload-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+    input[type=file] { display: none; }
+    .upload-msg { font-size: 11px; color: #3b82f6; }
+    .warning { color: #d97706; }
+    .toggle-btn.active { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+    .scroll-x {
+      overflow: auto;
+      padding: 12px 16px;
+      max-height: calc(100vh - 57px);
+    }
+    .scroll-x::-webkit-scrollbar { height: 7px; width: 7px; }
+    .scroll-x::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    table { border-collapse: collapse; width: 100%; min-width: 1180px; }
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: #f1f3f5;
+      color: #6b7280;
+      border-bottom: 1px solid #d8dee8;
+      border-right: 0;
+      padding: 7px 9px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 550;
+      white-space: nowrap;
+    }
+    .sk-cell {
+      padding: 10px 9px;
+      font-size: 11px;
+      border-right: 0;
+      border-bottom: 1px solid #eef2f7;
+      background: #fbfcfe;
+      vertical-align: middle;
+      text-align: center;
+      white-space: nowrap;
+      color: #374151;
+      font-weight: 550;
+      min-width: 70px;
+    }
+    .sk-cell.wide { min-width: 84px; }
+    .sk-cell.level-0,
+    .sk-cell.level-1 { background: #f8fafc; color: #0f172a; }
+    .sk-cell.level-2,
+    .sk-cell.level-3 { background: #fbfcfe; }
+    .sk-cell.empty { background: #fbfcfd; color: #cbd5e1; font-weight: 400; }
+    tr.has-data .sk-cell { color: #111827; }
+    .content-cell {
+      padding: 0;
+      border-bottom: 1px solid #eef2f7;
+      border-left: 12px solid #f7f8fa;
+      background: #fff;
+      vertical-align: top;
+      min-width: 640px;
+    }
+    .content-cell.empty { background: #fafbfc; }
+    .content-head {
+      display: grid;
+      grid-template-columns: minmax(540px, 1fr) 220px;
+      gap: 14px;
+      align-items: center;
+    }
+    .content-head { color: #6b7280; }
+    .review-cell { display: grid; grid-template-columns: minmax(540px, 1fr) 220px; gap: 14px; padding: 10px 12px; }
+    .timeline { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; align-content: flex-start; }
+    .time-dot { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 999px; border: 1px solid transparent; background: #f8fafc; font-size: 11px; color: #475569; white-space: nowrap; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+    .focus-badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .entry-stack { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .entry-card { border: 1px solid #e8edf5; border-radius: 6px; background: #fff; overflow: hidden; }
+    .entry-card.latest { border-color: #bfdbfe; background: #f8fbff; }
+    .entry-main { display: grid; grid-template-columns: minmax(320px, 1fr) 52px 48px; gap: 8px; align-items: start; padding: 8px 10px; }
+    .summary { color: #1f2937; line-height: 1.65; }
+    .entry-card.latest .summary { font-weight: 650; }
+    .entry-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+    .date-chip { color: #64748b; font-size: 11px; font-weight: 550; }
+    .center { text-align: center; }
+    .right { text-align: right; }
+    .att-badge { display: inline-block; padding: 1px 8px; border-radius: 3px; font-size: 11px; font-weight: 550; white-space: nowrap; }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 2px; }
+    .tag-pill { display: inline-flex; align-items: center; gap: 2px; padding: 1px 6px; border-radius: 3px; font-size: 10px; background: #f1f5f9; color: #64748b; white-space: nowrap; }
+    .tag-count { font-size: 9px; color: #9ca3af; }
+    .orig-btn { padding: 2px 8px; border-radius: 3px; font-size: 11px; color: #6b7280; }
+    .history-toggle { align-self: flex-start; width: fit-content; padding: 3px 9px; font-size: 11px; background: #f8fafc; }
+    .history-list { display: flex; flex-direction: column; gap: 6px; }
+    .orig-block { background: #fff; border-top: 1px solid #e5e7eb; padding: 10px 12px; font-size: 12px; line-height: 1.85; color: #374151; white-space: pre-wrap; }
+    .orig-label { display: block; margin-bottom: 4px; color: #94a3b8; font-size: 11px; }
+    .empty-label { padding: 6px 10px; font-size: 11px; color: #d1d5db; font-style: italic; }
+    @media (max-width: 760px) {
+      header { position: static; padding: 12px 14px; }
+      .scroll-x { max-height: none; padding: 10px; }
+      table { min-width: 980px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="head-left">
+      <h1>董小姐观点表格版</h1>
+      <span class="stats" id="stats">加载中</span>
+    </div>
+    <div class="head-actions" id="actions">
+      <label class="upload-btn">上传 Excel<input id="file-input" type="file" accept=".xlsx,.xls" /></label>
+      <span class="upload-msg" id="upload-msg">支持 A-K 候选表字段</span>
+    </div>
+  </header>
+  <div class="scroll-x">
+    <table id="view-table"></table>
+  </div>
+  <script>
+    const SKELETON = [
+  [
+    "中国",
+    "流动性",
+    "央行投放流动性",
+    "逆回购",
+    "",
+    ""
+  ],
+  [
+    "中国",
+    "流动性",
+    "央行投放流动性",
+    "MLF",
+    "",
+    ""
+  ],
+  [
+    "中国",
+    "流动性",
+    "央行投放流动性",
+    "降准",
+    "",
+    ""
+  ],
+  [
+    "中国",
+    "流动性",
+    "央行投放流动性",
+    "利率",
+    "LPR",
+    ""
+  ],
+  [
+    "中国",
+    "流动性",
+    "银行间流动性",
+    "Shibor",
+    "",
+    ""
+  ],
+  [
+    "中国",
+    "流动性",
+    "银行间流动性",
+    "国债逆回购利率",
+    "",
+    ""
+  ],
+  [
+    "中国",
+    "经济",
+    "先行指标",
+    "PMI",
+    "",
+    ""
+  ],
+  [
+    "中国",
+    "经济",
+    "同步指标",
+    "进出口",
+    "",
+    ""
+  ],
+  [
+    "中国",
+    "经济",
+    "同步指标",
+    "社融/信贷",
+    "",
+    ""
+  ],
+  [
+    "中国",
+    "经济",
+    "同步指标",
+    "CPI/PPI",
+    "",
+    ""
+  ],
+  [
+    "中国",
+    "经济",
+    "政策事件",
+    "政策",
+    "产业",
+    ""
+  ],
+  [
+    "中国",
+    "经济",
+    "政策事件",
+    "政策",
+    "财政",
+    ""
+  ],
+  [
+    "中国",
+    "经济",
+    "政策事件",
+    "政策",
+    "货币",
+    ""
+  ],
+  [
+    "中国",
+    "经济",
+    "政策事件",
+    "事件",
+    "战争",
+    ""
+  ],
+  [
+    "中国",
+    "经济",
+    "政策事件",
+    "事件",
+    "贸易战",
+    ""
+  ],
+  [
+    "中国",
+    "经济",
+    "政策事件",
+    "事件",
+    "地缘",
+    ""
+  ],
+  [
+    "中国",
+    "资产",
+    "股市",
+    "指数",
+    "",
+    ""
+  ],
+  [
+    "中国",
+    "资产",
+    "股市",
+    "ETF/国家队",
+    "",
+    ""
+  ],
+  [
+    "中国",
+    "资产",
+    "股市",
+    "两融/资金面",
+    "",
+    ""
+  ],
+  [
+    "中国",
+    "资产",
+    "股市",
+    "行业",
+    "有色金属",
+    ""
+  ],
+  [
+    "中国",
+    "资产",
+    "股市",
+    "行业",
+    "风电/光伏",
+    ""
+  ],
+  [
+    "中国",
+    "资产",
+    "股市",
+    "行业",
+    "半导体/算力",
+    ""
+  ],
+  [
+    "中国",
+    "资产",
+    "股市",
+    "行业",
+    "消费电子/机器人",
+    ""
+  ],
+  [
+    "中国",
+    "资产",
+    "股市",
+    "行业",
+    "创新药",
+    ""
+  ],
+  [
+    "中国",
+    "资产",
+    "股市",
+    "行业",
+    "煤炭",
+    ""
+  ],
+  [
+    "中国",
+    "资产",
+    "股市",
+    "行业",
+    "老基建",
+    ""
+  ],
+  [
+    "中国",
+    "资产",
+    "股市",
+    "行业",
+    "银行",
+    ""
+  ],
+  [
+    "中国",
+    "资产",
+    "股市",
+    "行业",
+    "商业航天",
+    ""
+  ],
+  [
+    "中国",
+    "资产",
+    "大宗商品",
+    "原油",
+    "",
+    ""
+  ],
+  [
+    "中国",
+    "资产",
+    "大宗商品",
+    "黄金",
+    "",
+    ""
+  ],
+  [
+    "中国",
+    "债市",
+    "国债收益率",
+    "10年国债",
+    "",
+    ""
+  ],
+  [
+    "中国",
+    "债市",
+    "国债收益率",
+    "30年国债",
+    "",
+    ""
+  ],
+  [
+    "中国",
+    "汇率",
+    "人民币",
+    "离岸/在岸",
+    "",
+    ""
+  ],
+  [
+    "美国",
+    "流动性",
+    "联邦基金利率",
+    "FOMC",
+    "",
+    ""
+  ],
+  [
+    "美国",
+    "流动性",
+    "联邦基金利率",
+    "缩表/QT",
+    "",
+    ""
+  ],
+  [
+    "美国",
+    "经济",
+    "就业",
+    "非农",
+    "",
+    ""
+  ],
+  [
+    "美国",
+    "经济",
+    "通胀",
+    "CPI",
+    "",
+    ""
+  ],
+  [
+    "美国",
+    "资产",
+    "股市",
+    "三大指数",
+    "",
+    ""
+  ],
+  [
+    "美国",
+    "资产",
+    "股市",
+    "科技板块",
+    "",
+    ""
+  ],
+  [
+    "美国",
+    "资产",
+    "债市",
+    "美债",
+    "",
+    ""
+  ],
+  [
+    "香港",
+    "资产",
+    "股市",
+    "恒生指数",
+    "",
+    ""
+  ],
+  [
+    "香港",
+    "资产",
+    "股市",
+    "恒生科技",
+    "",
+    ""
+  ]
+];
+    const DEMO_ENTRIES = [
+  {
+    "path": [
+      "中国",
+      "经济",
+      "政策事件",
+      "事件",
+      "战争",
+      ""
+    ],
+    "date": "4.22",
+    "summary": "特朗普昨晚口头认怂未拉涨美股，拐点出现，战争因素正在淡化",
+    "original": "昨晚特朗普口头认怂，本打算在美股开盘前释放利好，但市场并不买账，三大指数最终全部收跌。这其实告诉我们，拐点很可能已经出现—战争因素，或称\"特朗普因素\"，正在淡化。",
+    "attitude": "中性",
+    "tags": [
+      "#美伊冲突",
+      "#拐点"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "经济",
+      "政策事件",
+      "事件",
+      "战争",
+      ""
+    ],
+    "date": "4.21",
+    "summary": "21日凌晨伊朗国旗货船通过海峡——美国实质让步",
+    "original": "美国做出了悄悄妥协：21日凌晨，悬挂伊朗国旗的货船顺利通过霍尔木兹海峡。这是非常重要的动作，我将其视为美国挽救谈判的让步。伊朗看到这一实质性让步后，几小时内便宣布派出代表团前往巴基斯坦谈判。",
+    "attitude": "积极",
+    "tags": [
+      "#美伊冲突",
+      "#霍尔木兹",
+      "#谈判"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "经济",
+      "政策事件",
+      "事件",
+      "战争",
+      ""
+    ],
+    "date": "4.20",
+    "summary": "美国围而不打继续封锁，霍尔木兹冲突扣船，协议至少几个月",
+    "original": "美国目前执行\"围而不打\"策略，继续封锁伊朗周边港口和海岸线。昨天霍尔木兹海峡附近发生冲突，美国动用武力并扣留了一艘伊朗船只。真正达成协议至少要耗费几个月时间。",
+    "attitude": "中性",
+    "tags": [
+      "#美伊冲突",
+      "#通胀"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "经济",
+      "政策事件",
+      "事件",
+      "战争",
+      ""
+    ],
+    "date": "4.19",
+    "summary": "特朗普周五宣布大胜→伊朗周末否认，确有进展但非大胜",
+    "original": "特朗普单方面宣布与伊朗的谈判\"硕果累累\"。伊朗官方表态明确：浓缩铀不会交出去；并宣布关闭霍尔木兹海峡。",
+    "attitude": "中性",
+    "tags": [
+      "#美伊冲突"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "经济",
+      "政策事件",
+      "事件",
+      "战争",
+      ""
+    ],
+    "date": "4.15",
+    "summary": "特朗普称战争结束，24h内20艘商船通过海峡",
+    "original": "特朗普明确表示：\"我认为美国对伊朗的战争已经结束。\"在封锁海峡后的24小时内，已有20艘商船顺利通过。",
+    "attitude": "积极",
+    "tags": [
+      "#美伊冲突",
+      "#霍尔木兹"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "经济",
+      "政策事件",
+      "事件",
+      "战争",
+      ""
+    ],
+    "date": "4.14",
+    "summary": "美伊封锁海峡更多是谈判筹码，扰动在降级",
+    "original": "目前双方更多是将霍尔木兹海峡的封锁作为谈判筹码，而非开战理由。4月16日可能在巴基斯坦举行新一轮磋商。",
+    "attitude": "积极",
+    "tags": [
+      "#美伊冲突",
+      "#霍尔木兹",
+      "#冲突降级"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "经济",
+      "政策事件",
+      "政策",
+      "产业",
+      ""
+    ],
+    "date": "4.21",
+    "summary": "国务院专题学习顶格加持新能源，信号级别高",
+    "original": "国wu院召开专题学习会，统筹能源安全和绿色低碳转型。关键词：把握能源安全主动性、加快西北风光建设、西南水电、新型电网。",
+    "attitude": "积极",
+    "tags": [
+      "#新能源",
+      "#能源安全",
+      "#政策信号"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "经济",
+      "政策事件",
+      "政策",
+      "产业",
+      ""
+    ],
+    "date": "4.15",
+    "summary": "国务院创新药优待政策+估值消化，值得关注",
+    "original": "国wu院发布《关于健全药品价格形成机制的若干意见》，对创新药给予优待。创新药板块自年初以来已明显回调，估值有所消化。",
+    "attitude": "积极",
+    "tags": [
+      "#创新药",
+      "#政策信号"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "经济",
+      "同步指标",
+      "进出口",
+      "",
+      ""
+    ],
+    "date": "4.14",
+    "summary": "3月宏观数据一般，但发在定调会前反增强政策期待",
+    "original": "社融总量虽足，但结构存在瑕疵。3月出口增速仅2.5%。本次数据发布在4月底定调会之前，对市场影响偏中性。",
+    "attitude": "中性",
+    "tags": [
+      "#宏观数据",
+      "#政策期待"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "经济",
+      "政策事件",
+      "事件",
+      "贸易战",
+      ""
+    ],
+    "date": "4.15",
+    "summary": "关税退税1200-1500亿美元，但退款流程长利好有限",
+    "original": "美国海关宣布自4月20日起启动退税。涉及1200-1500亿美元。但退款可能耗时数月甚至数年，财政部长暗示7月可能换名目恢复。",
+    "attitude": "谨慎",
+    "tags": [
+      "#跨境电商",
+      "#关税"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "股市",
+      "指数",
+      "",
+      ""
+    ],
+    "date": "4.20",
+    "summary": "给点阳光就灿烂，沪深成交2.6万亿，融资连续一周净买入",
+    "original": "当前市场属于\"有一点阳光就灿烂\"的状态。沪深两市成交量上升至2.6万亿。在没破3万亿之前不至于过于发烧。",
+    "attitude": "积极",
+    "tags": [
+      "#情绪",
+      "#资金面"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "股市",
+      "指数",
+      "",
+      ""
+    ],
+    "date": "4.15",
+    "summary": "创业板十年新高+上证逼近4000——高原反应非利空",
+    "original": "创业板指挑战十年新高失败后回撤。上证逼近4000点。整数关口需要时间消化，并非重大利空。",
+    "attitude": "中性",
+    "tags": [
+      "#A股指数",
+      "#情绪"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "股市",
+      "指数",
+      "",
+      ""
+    ],
+    "date": "4.14",
+    "summary": "沪深成交2.38万亿站上牛熊线，融资余额+160亿",
+    "original": "沪深两市成交量持续恢复达2.38万亿元，连续多日站上\"牛熊分界线\"。融资余额增加约160亿元。",
+    "attitude": "积极",
+    "tags": [
+      "#资金面",
+      "#两融"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "股市",
+      "ETF/国家队",
+      "",
+      ""
+    ],
+    "date": "4.22",
+    "summary": "国家队一季度高位减仓科技/创业板/科创50，启示冷门长线",
+    "original": "一季度国家队减仓科技板块、创业板、科创50（清仓式）。拉长时间看，整体收益能多年维持8%-10%。",
+    "attitude": "中性",
+    "tags": [
+      "#国家队",
+      "#长线"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "股市",
+      "行业",
+      "有色金属",
+      ""
+    ],
+    "date": "4.20",
+    "summary": "原油一日涨5%，有色未到前高，不排除有色大年",
+    "original": "原油价格一天暴涨5%，化工品和有色金属价格再次上浮。有色金属2026年整体还没反弹到前期高位，不排除下一个有色金属大年。",
+    "attitude": "积极",
+    "tags": [
+      "#有色金属",
+      "#大年"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "股市",
+      "行业",
+      "有色金属",
+      ""
+    ],
+    "date": "4.19",
+    "summary": "高油价下新能源性价比凸显，中国乘用车出口+74%",
+    "original": "新能源性价比凸显。3月份中国乘用车出口同比大涨74%。上游有色金属、能源金属受益。",
+    "attitude": "积极",
+    "tags": [
+      "#新能源",
+      "#有色金属"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "股市",
+      "行业",
+      "有色金属",
+      ""
+    ],
+    "date": "4.15",
+    "summary": "有色/能源金属回踩属技术性，原油80+下方空间有限",
+    "original": "强势修复后技术回踩完全可以接受。原油从120+跌至80+，进一步跌至五六十可能性极低。",
+    "attitude": "积极",
+    "tags": [
+      "#有色金属",
+      "#原油"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "股市",
+      "行业",
+      "有色金属",
+      ""
+    ],
+    "date": "4.14",
+    "summary": "超跌反弹+供给管控（印尼/津巴布韦），持续关注",
+    "original": "印尼、津巴布韦对镍矿、锂矿出口管控。新能源需求旺盛背景下，供给端成为重大扰动源。",
+    "attitude": "积极",
+    "tags": [
+      "#有色金属",
+      "#能源金属"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "股市",
+      "行业",
+      "风电/光伏",
+      ""
+    ],
+    "date": "4.22",
+    "summary": "多晶硅期货连续多日涨5%+，股票市场尚未反应",
+    "original": "多晶硅期货已连续好几天大涨5%以上。期货市场短期资金认可未来需求度，股票市场好像没反应过来。",
+    "attitude": "积极",
+    "tags": [
+      "#新能源",
+      "#多晶硅",
+      "#期货"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "股市",
+      "行业",
+      "风电/光伏",
+      ""
+    ],
+    "date": "4.21",
+    "summary": "新能源坏消息已全部摊牌计入价格，估值消化到位",
+    "original": "产能过剩、打价格战、出口补贴退坡、海外封堵——所有坏消息已全部摊在桌面，已计入价格。",
+    "attitude": "积极",
+    "tags": [
+      "#新能源",
+      "#估值消化"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "股市",
+      "行业",
+      "风电/光伏",
+      ""
+    ],
+    "date": "4.20",
+    "summary": "光伏座谈会规范竞争+推动落后产能退出；多晶硅期货涨10%",
+    "original": "几大监管部门部署规范光伏行业竞争，推动落后产能退出，打击低于成本价销售。多晶硅期货一天暴涨10%。",
+    "attitude": "积极",
+    "tags": [
+      "#光伏",
+      "#政策信号",
+      "#多晶硅"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "股市",
+      "行业",
+      "半导体/算力",
+      ""
+    ],
+    "date": "4.22",
+    "summary": "国内算力抱团加速但换手率高位，越涨风险越高",
+    "original": "资金仍在光模块等算力硬件抱团，已进入加速上涨阶段。换手率处较高位置，越涨意味着风险度越高。",
+    "attitude": "谨慎",
+    "tags": [
+      "#算力",
+      "#抱团",
+      "#换手率"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "股市",
+      "行业",
+      "半导体/算力",
+      ""
+    ],
+    "date": "4.21",
+    "summary": "液冷龙头一季报利润负增长，产业链资金面可能紧张",
+    "original": "液冷系统龙头股一季度财报利润负增长。应收账款坏账大幅增加。可能意味着整个产业链资金面紧张。",
+    "attitude": "负面",
+    "tags": [
+      "#液冷",
+      "#算力",
+      "#财报暴雷"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "股市",
+      "行业",
+      "半导体/算力",
+      ""
+    ],
+    "date": "4.20",
+    "summary": "算力硬件透支短期，关注下游应用接力",
+    "original": "人工智能上游算力硬件已透支短期空间。下游应用可能接力：自动驾驶、AI穿戴设备、人形机器人。",
+    "attitude": "谨慎",
+    "tags": [
+      "#算力",
+      "#下游应用",
+      "#机器人"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "股市",
+      "行业",
+      "半导体/算力",
+      ""
+    ],
+    "date": "4.19",
+    "summary": "光模块4月涨近30%资金抱团，警惕放量滞涨",
+    "original": "龙头光模块公司4月涨幅接近30%。涨速极快，估值逻辑被搁置。警惕成交量放大、换手率骤增。",
+    "attitude": "谨慎",
+    "tags": [
+      "#算力",
+      "#光模块",
+      "#抱团"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "股市",
+      "行业",
+      "消费电子/机器人",
+      ""
+    ],
+    "date": "4.22",
+    "summary": "AI下游应用回调深可能接力，家政机器人新品",
+    "original": "消费电子、智能驾驶、机器人赛道回调幅度深，有机器人公司推出家庭服务家政机器人。",
+    "attitude": "积极",
+    "tags": [
+      "#AI下游",
+      "#机器人",
+      "#消费电子"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "股市",
+      "行业",
+      "煤炭",
+      ""
+    ],
+    "date": "4.21",
+    "summary": "传统能源不丢，煤炭作为中国优势资源受益",
+    "original": "传统能源也不能丢，中国优势在煤炭资源，煤炭板块再次上涨。",
+    "attitude": "积极",
+    "tags": [
+      "#煤炭",
+      "#传统能源"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "大宗商品",
+      "原油",
+      "",
+      ""
+    ],
+    "date": "4.19",
+    "summary": "美国围而不打抢生意，原油80+可能是阶段性底部",
+    "original": "美国已是全球最大产油国。原油80多美元/桶很可能已触及阶段性底部。",
+    "attitude": "中性",
+    "tags": [
+      "#原油",
+      "#围而不打"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "资产",
+      "大宗商品",
+      "原油",
+      "",
+      ""
+    ],
+    "date": "4.14",
+    "summary": "原油不是好交易时段，替代品煤炭领跌",
+    "original": "原油目前不是好的交易时段，容易左右踩坑。今天原油下跌，煤炭也领跌。",
+    "attitude": "谨慎",
+    "tags": [
+      "#原油",
+      "#煤炭"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "汇率",
+      "人民币",
+      "离岸/在岸",
+      "",
+      ""
+    ],
+    "date": "4.19",
+    "summary": "人民币升值加速，周小川称黄金窗口期，至6.5仍有5%空间",
+    "original": "前央行行长周xiao川发表报告：\"当下人民币国际化迎来黄金窗口期\"。汇率对比6.5仍有约5%升值空间。",
+    "attitude": "积极",
+    "tags": [
+      "#人民币",
+      "#国际化"
+    ]
+  },
+  {
+    "path": [
+      "中国",
+      "汇率",
+      "人民币",
+      "离岸/在岸",
+      "",
+      ""
+    ],
+    "date": "4.15",
+    "summary": "美元从105跌至98，人民币升至6.82挑战6.5",
+    "original": "美元指数从105一路下跌至98。人民币汇率已升至6.82左右，可能挑战6.5关口。",
+    "attitude": "积极",
+    "tags": [
+      "#人民币",
+      "#汇率"
+    ]
+  },
+  {
+    "path": [
+      "美国",
+      "资产",
+      "股市",
+      "三大指数",
+      "",
+      ""
+    ],
+    "date": "4.22",
+    "summary": "沃什听证透露缩表，纳指-0.6%标普-0.63%，反弹接近尾声",
+    "original": "沃什提名听证会提到美联储未来需要缩表。纳指跌0.6%，标普跌0.63%。特朗普认怂市场也不买账。",
+    "attitude": "负面",
+    "tags": [
+      "#美联储",
+      "#沃什",
+      "#缩表"
+    ]
+  },
+  {
+    "path": [
+      "美国",
+      "资产",
+      "股市",
+      "三大指数",
+      "",
+      ""
+    ],
+    "date": "4.21",
+    "summary": "沃什偏鹰+私募债隐患两道坎，美股最大威胁转向内部",
+    "original": "沃什偏鹰派。私募债隐患未解除。对美股最大威胁并非战争，真正重要的是美国内部问题。",
+    "attitude": "谨慎",
+    "tags": [
+      "#美联储",
+      "#沃什",
+      "#私募债"
+    ]
+  },
+  {
+    "path": [
+      "美国",
+      "资产",
+      "股市",
+      "三大指数",
+      "",
+      ""
+    ],
+    "date": "4.19",
+    "summary": "美股可能已反弹至阶段性高点，利好充分计入",
+    "original": "美国市场已收复2026年以来所有跌幅甚至创新高。几乎所有利好已被充分计入。通胀可能卷土重来。",
+    "attitude": "谨慎",
+    "tags": [
+      "#美股",
+      "#阶段性高点",
+      "#私募债"
+    ]
+  }
+];
+    const ATT = {
+      "积极": { color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
+      "中性": { color: "#6b7280", bg: "#f9fafb", border: "#e5e7eb" },
+      "谨慎": { color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
+      "负面": { color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" }
+    };
+    const skCols = ["经济体", "维度", "板块", "议题/指标", "子项", "细项"];
+    let entries = DEMO_ENTRIES;
+    let openOrig = new Set();
+    let openHistory = new Set();
+    let showFullSkeleton = false;
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+    function pathKey(path) { return path.map(v => String(v || "").trim()).filter(Boolean).join("|"); }
+    function sortDateDesc(a, b) {
+      const pa = String(a).split(".").map(Number);
+      const pb = String(b).split(".").map(Number);
+      return (pb[0] - pa[0]) || (pb[1] - pa[1]);
+    }
+    function uniqueDates(list) {
+      return [...new Set(list.map(entry => entry.date))].sort(sortDateDesc);
+    }
+    function latestDateOfEntries() {
+      return uniqueDates(entries)[0] || "-";
+    }
+    function isPersistent(row) {
+      return uniqueDates(row.entries).length >= 2;
+    }
+    function buildModel() {
+      const tagCounts = {};
+      const entryMap = {};
+      entries.forEach(entry => {
+        entry.tags.forEach(tag => { tagCounts[tag] = (tagCounts[tag] || 0) + 1; });
+        const key = pathKey(entry.path);
+        if (!entryMap[key]) entryMap[key] = [];
+        entryMap[key].push(entry);
+      });
+      Object.values(entryMap).forEach(list => list.sort((a, b) => sortDateDesc(a.date, b.date)));
+      const rows = SKELETON.map(sk => ({ skeleton: sk, entries: entryMap[pathKey(sk)] || [], key: pathKey(sk) }));
+      const skeletonKeys = new Set(SKELETON.map(pathKey));
+      Object.entries(entryMap).forEach(([key, list]) => {
+        if (!skeletonKeys.has(key)) {
+          const path = key.split("|");
+          while (path.length < 6) path.push("");
+          rows.push({ skeleton: path, entries: list, key });
+        }
+      });
+      const filledRows = rows.filter(row => row.entries.length > 0);
+      const visibleRows = showFullSkeleton ? rows : filledRows;
+      const persistentRows = filledRows.filter(isPersistent);
+      return {
+        rows,
+        visibleRows,
+        filledRows,
+        persistentRows,
+        tagCounts,
+        latestDate: latestDateOfEntries()
+      };
+    }
+    function shouldMerge(rows, rowIdx, colIdx) {
+      if (rowIdx === 0) return false;
+      const prev = rows[rowIdx - 1].skeleton;
+      const curr = rows[rowIdx].skeleton;
+      for (let c = 0; c <= colIdx; c++) {
+        if ((prev[c] || "") !== (curr[c] || "")) return false;
+      }
+      return true;
+    }
+    function rowSpanFor(rows, rowIdx, colIdx) {
+      const curr = rows[rowIdx].skeleton;
+      let span = 1;
+      for (let r = rowIdx + 1; r < rows.length; r++) {
+        const next = rows[r].skeleton;
+        let samePrefix = true;
+        for (let c = 0; c <= colIdx; c++) {
+          if ((curr[c] || "") !== (next[c] || "")) {
+            samePrefix = false;
+            break;
+          }
+        }
+        if (!samePrefix) break;
+        span++;
+      }
+      return span;
+    }
+    function spanHasData(rows, rowIdx, span) {
+      return rows.slice(rowIdx, rowIdx + span).some(row => row.entries.length > 0);
+    }
+    function renderHeader(model) {
+      document.getElementById("stats").innerHTML = [
+        '<span class="stat-pill strong">' + entries.length + ' 条观点</span>',
+        '<span class="stat-pill">' + model.filledRows.length + '/' + model.rows.length + ' 分类有数据</span>',
+        '<span class="stat-pill">最新 ' + escapeHtml(model.latestDate) + '</span>',
+        '<span class="stat-pill">' + model.persistentRows.length + ' 个持续关注</span>',
+        '<span class="stat-pill">' + (showFullSkeleton ? '完整骨架' : '仅有数据') + '</span>'
+      ].join("");
+      const actions = document.getElementById("actions");
+      const legend = Object.entries(ATT).map(([name, cfg]) =>
+        '<span class="legend-item" style="color:' + cfg.color + '"><i class="legend-dot" style="background:' + cfg.color + '"></i>' + escapeHtml(name) + '</span>'
+      ).join("");
+      if (!actions.dataset.ready) {
+        actions.insertAdjacentHTML("afterbegin", legend + '<button class="toggle-btn" id="skeleton-toggle" type="button">显示完整骨架</button>');
+        document.getElementById("skeleton-toggle").addEventListener("click", () => {
+          showFullSkeleton = !showFullSkeleton;
+          render();
+        });
+        actions.dataset.ready = "1";
+      }
+      const toggle = document.getElementById("skeleton-toggle");
+      if (toggle) {
+        toggle.textContent = showFullSkeleton ? "隐藏空分类" : "显示完整骨架";
+        toggle.classList.toggle("active", showFullSkeleton);
+      }
+    }
+    function renderTable(model) {
+      const table = document.getElementById("view-table");
+      table.innerHTML = '<thead><tr>' +
+        skCols.map(col => '<th>' + escapeHtml(col) + '</th>').join("") +
+        '<th style="min-width:640px"><div class="content-head"><span>观点复盘</span><span>主题走势</span></div></th>' +
+        '</tr></thead><tbody>' +
+        model.visibleRows.map((row, ri) => renderRow(row, ri, model)).join("") +
+        '</tbody>';
+      table.querySelectorAll("[data-orig]").forEach(button => {
+        button.addEventListener("click", () => {
+          const id = button.dataset.orig;
+          openOrig.has(id) ? openOrig.delete(id) : openOrig.add(id);
+          render();
+        });
+      });
+      table.querySelectorAll("[data-history]").forEach(button => {
+        button.addEventListener("click", () => {
+          const id = button.dataset.history;
+          openHistory.has(id) ? openHistory.delete(id) : openHistory.add(id);
+          render();
+        });
+      });
+    }
+    function renderRow(row, ri, model) {
+      const hasData = row.entries.length > 0;
+      const persistent = hasData && isPersistent(row);
+      const skHtml = skCols.map((_, ci) => {
+        if (shouldMerge(model.visibleRows, ri, ci)) return "";
+        const span = rowSpanFor(model.visibleRows, ri, ci);
+        const spanData = spanHasData(model.visibleRows, ri, span);
+        const val = String(row.skeleton[ci] || "").trim();
+        const cls = 'sk-cell level-' + ci + (ci >= 2 ? ' wide' : '') + (!spanData ? ' empty' : '');
+        return '<td rowspan="' + span + '" class="' + cls + '">' + escapeHtml(val || '') + '</td>';
+      }).join("");
+      const content = !hasData
+        ? '<div class="empty-label">—</div>'
+        : renderReviewCell(row, model.tagCounts);
+      const rowClass = (hasData ? 'has-data' : 'empty-row') + (persistent ? ' is-persistent' : '');
+      return '<tr class="' + rowClass + '">' + skHtml + '<td class="content-cell' + (!hasData ? ' empty' : '') + '">' + content + '</td></tr>';
+    }
+    function renderReviewCell(row, tagCounts) {
+      const latest = row.entries[0];
+      const history = row.entries.slice(1);
+      const historyOpen = openHistory.has(row.key);
+      const dates = uniqueDates(row.entries);
+      const persistent = isPersistent(row);
+      return '<div class="review-cell">' +
+        '<div class="entry-stack">' +
+          renderEntry(latest, row.key + '-0', tagCounts, true) +
+          (history.length ? '<button class="history-toggle" data-history="' + escapeHtml(row.key) + '">' + (historyOpen ? '收起历史观点' : '展开历史观点 ' + history.length + ' 条') + '</button>' : '') +
+          (history.length && historyOpen ? '<div class="history-list">' + history.map((entry, index) => renderEntry(entry, row.key + '-' + (index + 1), tagCounts, false)).join("") + '</div>' : '') +
+        '</div>' +
+        '<div class="timeline">' +
+          renderTimeline(row.entries) +
+          (persistent ? '<span class="focus-badge">持续关注</span>' : '') +
+        '</div>' +
+      '</div>';
+    }
+    function renderTimeline(list) {
+      const byDate = {};
+      list.forEach(entry => {
+        if (!byDate[entry.date]) byDate[entry.date] = [];
+        byDate[entry.date].push(entry);
+      });
+      return Object.keys(byDate).sort(sortDateDesc).map(date => {
+        const attitude = dominantAttitude(byDate[date]);
+        const cfg = ATT[attitude] || ATT["中性"];
+        return '<span class="time-dot" title="' + escapeHtml(date + ' · ' + attitude) + '" style="border-color:' + cfg.border + ';background:' + cfg.bg + ';color:' + cfg.color + '"><i class="dot" style="background:' + cfg.color + '"></i>' + escapeHtml(date) + '</span>';
+      }).join("");
+    }
+    function dominantAttitude(list) {
+      const priority = { "负面": 4, "谨慎": 3, "积极": 2, "中性": 1 };
+      return list.reduce((best, entry) => (priority[entry.attitude] || 0) > (priority[best] || 0) ? entry.attitude : best, list[0]?.attitude || "中性");
+    }
+    function renderEntry(entry, id, tagCounts, isLatest) {
+      const att = ATT[entry.attitude] || ATT["中性"];
+      const isOpen = openOrig.has(id);
+      return '<article class="entry-card' + (isLatest ? ' latest' : '') + '">' +
+        '<div class="entry-main">' +
+          '<div>' +
+            '<div class="summary">' + escapeHtml(entry.summary) + '</div>' +
+            '<div class="entry-meta">' +
+              '<span class="date-chip">' + escapeHtml(isLatest ? '最新 · ' + entry.date : entry.date) + '</span>' +
+              '<div class="tag-list">' + entry.tags.map(tag => '<span class="tag-pill">' + escapeHtml(tag) + '<span class="tag-count">' + (tagCounts[tag] || 0) + '</span></span>').join("") + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="center"><button class="orig-btn" data-orig="' + escapeHtml(id) + '">' + (isOpen ? '收起' : '原文') + '</button></div>' +
+          '<div class="center"><span class="att-badge" style="background:' + att.bg + ';color:' + att.color + ';border:1px solid ' + att.border + '">' + escapeHtml(entry.attitude) + '</span></div>' +
+        '</div>' +
+        (isOpen ? '<div class="orig-block"><span class="orig-label">原文摘录</span>' + escapeHtml(entry.original) + '</div>' : '') +
+      '</article>';
+    }
+    function parseExcel(workbook) {
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const header = rows[0] || [];
+      const iG = header.indexOf("原文摘录");
+      const iH = header.indexOf("精简观点");
+      const iI = header.indexOf("态度");
+      const iJ = header.indexOf("标签");
+      const iK = header.indexOf("时间");
+      if ([iG, iH, iI, iJ, iK].some(i => i < 0)) return null;
+      const out = [];
+      for (let r = 1; r < rows.length; r++) {
+        const row = rows[r] || [];
+        if (!row[iK] || !row[iJ]) continue;
+        const tags = String(row[iJ] || "").match(/#[^\s#]+/g) || [];
+        if (!tags.length) continue;
+        out.push({
+          path: [row[0], row[1], row[2], row[3], row[4], row[5]].map(v => String(v || "")),
+          date: String(row[iK]),
+          summary: String(row[iH] || ""),
+          original: String(row[iG] || ""),
+          attitude: String(row[iI] || "中性"),
+          tags
+        });
+      }
+      return out.length ? out : null;
+    }
+    function bindUpload() {
+      const input = document.getElementById("file-input");
+      const msg = document.getElementById("upload-msg");
+      input.addEventListener("change", event => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        if (!window.XLSX) {
+          msg.innerHTML = '<span class="warning">Excel 解析库未加载，请联网后重试。</span>';
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = ev => {
+          try {
+            const workbook = XLSX.read(ev.target.result, { type: "array" });
+            const parsed = parseExcel(workbook);
+            if (!parsed) {
+              msg.innerHTML = '<span class="warning">未找到匹配字段：原文摘录、精简观点、态度、标签、时间。</span>';
+              return;
+            }
+            entries = parsed;
+            openOrig = new Set();
+            openHistory = new Set();
+            msg.textContent = '已加载 ' + parsed.length + ' 条';
+            render();
+          } catch (error) {
+            msg.innerHTML = '<span class="warning">解析失败。</span>';
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    }
+    function render() {
+      const model = buildModel();
+      renderHeader(model);
+      renderTable(model);
+    }
+    bindUpload();
+    render();
+  </script>
+</body>
+</html>

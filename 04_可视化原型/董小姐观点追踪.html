@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>董小姐观点追踪</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #0b1120;
+      color: #cbd5e1;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 20px 28px;
+      border-bottom: 1px solid #1e293b;
+      flex-wrap: wrap;
+    }
+    h1 {
+      margin: 0;
+      color: #f1f5f9;
+      font-size: 22px;
+      font-weight: 650;
+      letter-spacing: 1px;
+    }
+    .subline {
+      margin: 4px 0 0;
+      color: #64748b;
+      font-size: 12px;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .legend {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+    }
+    .dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    button, .upload-label {
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #94a3b8;
+      border-radius: 6px;
+      padding: 7px 14px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button:hover, .upload-label:hover {
+      color: #e2e8f0;
+      border-color: #3b82f6;
+    }
+    input[type=file] { display: none; }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 260px;
+      min-height: calc(100vh - 82px);
+    }
+    main {
+      padding: 16px 20px;
+      min-width: 0;
+    }
+    aside {
+      border-left: 1px solid #1e293b;
+      padding: 16px;
+      max-height: calc(100vh - 82px);
+      overflow: auto;
+    }
+    .filters {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      padding: 5px 12px;
+      border-radius: 4px;
+      background: transparent;
+      font-size: 12px;
+    }
+    .filter-btn.active {
+      background: #1e40af;
+      border-color: #3b82f6;
+      color: #e2e8f0;
+    }
+    .matrix-wrap {
+      overflow: auto;
+      max-height: calc(100vh - 210px);
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+    }
+    th, td {
+      border-bottom: 1px solid rgba(30, 41, 59, 0.7);
+      padding: 7px 8px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    th {
+      color: #64748b;
+      font-weight: 500;
+      background: #0b1120;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    th:first-child, td:first-child {
+      position: sticky;
+      left: 0;
+      background: #0b1120;
+      z-index: 1;
+      text-align: left;
+      min-width: 140px;
+    }
+    th:first-child { z-index: 3; }
+    tr:hover td { background: rgba(255,255,255,0.025); }
+    tr:hover td:first-child { background: #10182a; }
+    .matrix-cell {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      margin: 0 auto;
+      cursor: pointer;
+      opacity: 0.86;
+      transition: transform 120ms ease, filter 120ms ease;
+    }
+    .matrix-cell:hover {
+      transform: scale(1.35);
+      filter: brightness(1.2);
+    }
+    .empty-cell {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 1px solid #1e293b;
+      margin: 0 auto;
+      opacity: 0.4;
+    }
+    .selected-cell {
+      outline: 3px solid rgba(96, 165, 250, 0.35);
+      box-shadow: 0 0 14px rgba(96, 165, 250, 0.3);
+    }
+    aside h2 {
+      margin: 0 0 14px;
+      font-size: 13px;
+      color: #94a3b8;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .change-section {
+      margin-bottom: 18px;
+    }
+    .change-title {
+      font-size: 11px;
+      margin-bottom: 7px;
+      font-weight: 600;
+    }
+    .badge {
+      display: inline-block;
+      margin: 2px 3px 2px 0;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .rule-box {
+      margin-top: 22px;
+      padding-top: 14px;
+      border-top: 1px solid #1e293b;
+      color: #64748b;
+      font-size: 11px;
+      line-height: 1.8;
+    }
+    .detail-panel {
+      border-top: 1px solid #1e293b;
+      background: #0f172a;
+      padding: 18px 28px 24px;
+    }
+    .detail-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .detail-head h2 {
+      margin: 0;
+      color: #e2e8f0;
+      font-size: 15px;
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 12px;
+    }
+    .detail-card {
+      border: 1px solid #334155;
+      border-radius: 8px;
+      background: #1e293b;
+      padding: 14px;
+    }
+    .summary-line {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      color: #f1f5f9;
+      line-height: 1.55;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+    .attitude-pill {
+      flex: 0 0 auto;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+    .original {
+      border-top: 1px solid #334155;
+      padding-top: 8px;
+      color: #94a3b8;
+      font-size: 11px;
+      line-height: 1.75;
+      max-height: 180px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+    .tag-list {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .tag-list span {
+      color: #60a5fa;
+      background: rgba(59, 130, 246, 0.1);
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+    .status {
+      color: #60a5fa;
+      font-size: 11px;
+      max-width: 260px;
+    }
+    .warning {
+      color: #fbbf24;
+    }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      aside { border-left: 0; border-top: 1px solid #1e293b; max-height: none; }
+      .matrix-wrap { max-height: 60vh; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>董小姐观点追踪</h1>
+      <p class="subline" id="stats">加载中</p>
+    </div>
+    <div class="header-actions">
+      <div class="legend" id="legend"></div>
+      <label class="upload-label">
+        上传 Excel
+        <input id="file-input" type="file" accept=".xlsx,.xls" />
+      </label>
+      <span class="status" id="upload-msg">支持包含：原文摘录、精简观点、态度、标签、时间 的 Excel</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <main>
+      <div class="filters" id="filters"></div>
+      <div class="matrix-wrap">
+        <table id="matrix-table"></table>
+      </div>
+    </main>
+    <aside>
+      <h2 id="change-title">变化提示</h2>
+      <div id="changes"></div>
+      <div class="rule-box">
+        首次出现：过去 7 天无记录<br />
+        持续关注：最近 3 天中 ≥2 天出现<br />
+        淡出视野：最近 3 天连续出现后今日消失<br />
+        态度转向：最近一次态度与今日不同
+      </div>
+    </aside>
+  </div>
+
+  <section class="detail-panel" id="detail-panel" hidden>
+    <div class="detail-head">
+      <h2 id="detail-title"></h2>
+      <button id="close-detail">关闭</button>
+    </div>
+    <div class="detail-grid" id="detail-grid"></div>
+  </section>
+
+  <script>
+    const demoData = [
+      { date: "4.14", summary: "美伊封锁海峡更多是谈判筹码，扰动在降级", original: "美伊双方围绕霍尔木兹海峡的紧张更多是谈判筹码，而非直接开战理由，后续可能继续通过磋商降级。", attitude: "积极", tags: ["#美伊冲突", "#霍尔木兹", "#冲突降级"] },
+      { date: "4.14", summary: "原油不是好交易时段，替代品煤炭领跌", original: "原油当前容易左右踩坑，不是好的交易时段；原油下跌后，其替代品煤炭也出现领跌表现。", attitude: "谨慎", tags: ["#原油", "#煤炭"] },
+      { date: "4.15", summary: "美元从 105 跌至 98，人民币升至 6.82 并可能挑战 6.5", original: "美元指数从前几天的 105 左右下跌至 98，人民币汇率升至 6.82 左右，接下来可能挑战 6.5。", attitude: "积极", tags: ["#人民币", "#汇率"] },
+      { date: "4.15", summary: "创新药政策优待叠加估值消化，值得关注", original: "国务院发布药品价格形成机制相关意见，明确对创新药给予优待；创新药板块年初以来已有明显回调，估值有所消化。", attitude: "积极", tags: ["#创新药", "#政策信号"] },
+      { date: "4.19", summary: "美股可能反弹至阶段性高点，利好充分计入", original: "美国市场已基本收复 2026 年以来跌幅甚至创出新高，但宏观经济和中东局势的利好可能已被充分计入价格。", attitude: "谨慎", tags: ["#美股", "#阶段性高点"] },
+      { date: "4.19", summary: "光模块 4 月涨近 30%，警惕资金抱团和放量滞涨", original: "光模块龙头 4 月涨幅接近 30%，估值逻辑被暂时搁置，需要观察是否出现放量和滞涨。", attitude: "谨慎", tags: ["#算力", "#光模块", "#抱团"] },
+      { date: "4.20", summary: "沪深成交 2.6 万亿，融资连续净买入，市场情绪偏暖", original: "沪深成交量上升至 2.6 万亿，融资余额连续一周净买入，市场有一点阳光就灿烂。", attitude: "积极", tags: ["#情绪", "#资金面"] },
+      { date: "4.20", summary: "光伏政策推动落后产能退出，多晶硅期货一日涨 10%", original: "监管部门部署规范光伏行业竞争秩序，推动落后产能有序退出，多晶硅价格在期货市场上一天暴涨 10%。", attitude: "积极", tags: ["#光伏", "#政策信号", "#多晶硅"] },
+      { date: "4.21", summary: "美国放行伊朗国旗货船，视为谈判让步", original: "21 日凌晨，悬挂伊朗国旗的货船顺利通过霍尔木兹海峡，可视为美国挽救谈判的实质让步。", attitude: "积极", tags: ["#美伊冲突", "#霍尔木兹", "#谈判"] },
+      { date: "4.21", summary: "国务院专题学习加持新能源，能源安全信号级别高", original: "国务院专题学习统筹能源安全和绿色低碳转型，关键词包括能源安全、风电、光伏、水电和新型电网。", attitude: "积极", tags: ["#新能源", "#能源安全", "#政策信号"] },
+      { date: "4.22", summary: "沃什听证透露缩表倾向，美股快速反弹接近尾声", original: "美联储下一任主席沃什提名听证会提到未来需要缩表，纳指和标普均有下跌反应。", attitude: "负面", tags: ["#美联储", "#沃什", "#缩表"] },
+      { date: "4.22", summary: "AI 下游应用回调深，消费电子、智能驾驶、机器人可能接力", original: "AI 下游应用包括消费电子、智能驾驶、机器人等方向，回调较深，后续可能开始接力。", attitude: "积极", tags: ["#AI下游", "#机器人", "#消费电子"] },
+      { date: "4.26", summary: "光模块从业绩验证切入杀跌，短期不宜重返", original: "市场主导因素变成业绩，光模块龙头业绩环比下降后跌幅超 10%，情绪资金驱动的高位板块容易引发连环踩踏。", attitude: "负面", tags: ["#光模块", "#业绩杀", "#算力", "#财报暴雷"] },
+      { date: "4.26", summary: "新能源、电网、电力建设承接资金和政策逻辑", original: "光模块资金出逃后需要新去处，新能源、电网建设、电力建设受到现货价格、政策暖风和资金承接共同支撑。", attitude: "积极", tags: ["#新能源", "#电网", "#电力建设", "#资金承接"] },
+      { date: "4.27", summary: "五一前流动性担忧不构成主要压力", original: "虽然小长假前资金可能观望，但 GC001 和 7 天逆回购利率基本平稳且处于年内相对低位，说明流动性不紧。", attitude: "中性", tags: ["#五一假期", "#流动性", "#GC001"] },
+      { date: "4.27", summary: "5 月主线可能从业绩切换到政策信号", original: "4 月业绩为王，光模块和能源金属表现突出；财报披露结束后，5 月敏感变量可能转向政策信号。", attitude: "中性", tags: ["#业绩为王", "#政策信号", "#风格切换"] },
+      { date: "4.27", summary: "能源安全可能成为政策会议重点，新能源逻辑重新发酵", original: "伊朗冲突拖累原油供给，油价预期上调，可能推动国内政策会议重新部署能源安全。", attitude: "积极", tags: ["#能源安全", "#原油", "#新能源"] },
+      { date: "4.27", summary: "AI 模型降价扩大应用，终极约束传导到电力和电网", original: "DeepSeek 下调 TOKEN 价格后，应用可能更大范围铺开，需要更多算力和上游能源供给，最终传导到新能源、电网设备。", attitude: "积极", tags: ["#DeepSeek", "#TOKEN降价", "#电力约束", "#电网设备"] }
+    ];
+
+    const attitudeConfig = {
+      "积极": { color: "#34d399", bg: "rgba(52,211,153,0.15)" },
+      "中性": { color: "#94a3b8", bg: "rgba(148,163,184,0.15)" },
+      "谨慎": { color: "#fbbf24", bg: "rgba(251,191,36,0.15)" },
+      "负面": { color: "#f87171", bg: "rgba(248,113,113,0.15)" }
+    };
+
+    const tagTypes = {
+      "事件": tag => ["#美伊冲突", "#霍尔木兹", "#谈判", "#冲突降级", "#伊朗冲突"].includes(tag),
+      "资产": tag => ["#原油", "#煤炭", "#新能源", "#光伏", "#多晶硅", "#算力", "#光模块", "#创新药", "#AI下游", "#机器人", "#消费电子", "#电网", "#电力建设"].includes(tag),
+      "机构": tag => ["#美联储", "#沃什", "#国务院", "#国家队"].includes(tag),
+      "信号": tag => ["#政策信号", "#抱团", "#财报暴雷", "#阶段性高点", "#资金承接", "#业绩杀", "#风格切换", "#电力约束"].includes(tag)
+    };
+
+    let data = demoData;
+    let selected = null;
+    let filterType = "全部";
+
+    function parseDate(date) {
+      return String(date).split(".").map(Number);
+    }
+
+    function sortDates(dates) {
+      return [...dates].sort((a, b) => {
+        const [am, ad] = parseDate(a);
+        const [bm, bd] = parseDate(b);
+        return am - bm || ad - bd;
+      });
+    }
+
+    function getModel() {
+      const dateSet = new Set();
+      const tagFreq = {};
+      const matrix = {};
+
+      data.forEach((entry, index) => {
+        dateSet.add(entry.date);
+        entry.tags.forEach(tag => {
+          tagFreq[tag] = (tagFreq[tag] || 0) + 1;
+          const key = tag + "|" + entry.date;
+          if (!matrix[key]) matrix[key] = [];
+          matrix[key].push(index);
+        });
+      });
+
+      const dates = sortDates(dateSet);
+      const tags = Object.keys(tagFreq).sort((a, b) => tagFreq[b] - tagFreq[a] || a.localeCompare(b, "zh-Hans-CN"));
+      return { dates, tags, tagFreq, matrix, changes: computeChanges(dates, tags) };
+    }
+
+    function computeChanges(dates, tags) {
+      if (dates.length < 2) return { newTags: [], persistent: [], disappeared: [], attitudeChanged: [] };
+      const latest = dates[dates.length - 1];
+      const prev3 = dates.slice(Math.max(0, dates.length - 4), -1);
+      const prev7 = dates.slice(Math.max(0, dates.length - 8), -1);
+      const tagDates = {};
+      const tagAttitudes = {};
+
+      data.forEach(entry => {
+        entry.tags.forEach(tag => {
+          if (!tagDates[tag]) tagDates[tag] = new Set();
+          tagDates[tag].add(entry.date);
+          if (!tagAttitudes[tag]) tagAttitudes[tag] = {};
+          tagAttitudes[tag][entry.date] = entry.attitude;
+        });
+      });
+
+      const result = { newTags: [], persistent: [], disappeared: [], attitudeChanged: [] };
+      tags.forEach(tag => {
+        const ds = tagDates[tag] || new Set();
+        const inLatest = ds.has(latest);
+        const inPrev7 = prev7.filter(date => ds.has(date)).length;
+        const inPrev3 = prev3.filter(date => ds.has(date)).length;
+
+        if (inLatest && inPrev7 === 0) result.newTags.push(tag);
+        if (inLatest && inPrev3 >= 2) result.persistent.push(tag);
+        if (!inLatest && prev3.length >= 2 && inPrev3 === prev3.length) result.disappeared.push(tag);
+
+        if (inLatest && inPrev7 > 0) {
+          const prevDates = prev7.filter(date => ds.has(date));
+          const lastPrev = prevDates[prevDates.length - 1];
+          const from = tagAttitudes[tag]?.[lastPrev];
+          const to = tagAttitudes[tag]?.[latest];
+          if (from && to && from !== to) result.attitudeChanged.push({ tag, from, to });
+        }
+      });
+      return result;
+    }
+
+    function dominantAttitude(entries) {
+      if (!entries.length) return null;
+      const priority = { "负面": 4, "谨慎": 3, "积极": 2, "中性": 1 };
+      return entries.reduce((best, item) => (priority[item.attitude] || 0) > (priority[best.attitude] || 0) ? item : best, entries[0]).attitude;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function renderLegend() {
+      const legend = document.getElementById("legend");
+      legend.innerHTML = Object.entries(attitudeConfig).map(([key, cfg]) =>
+        `<span style="color:${cfg.color}"><i class="dot" style="background:${cfg.color}"></i>${key}</span>`
+      ).join("");
+    }
+
+    function renderFilters() {
+      const filters = document.getElementById("filters");
+      const items = ["全部", "事件", "资产", "机构", "信号"];
+      filters.innerHTML = `<span style="font-size:11px;color:#64748b;margin-right:4px">筛选</span>` + items.map(item =>
+        `<button class="filter-btn ${filterType === item ? "active" : ""}" data-filter="${item}">${item}</button>`
+      ).join("");
+      filters.querySelectorAll("button").forEach(button => {
+        button.addEventListener("click", () => {
+          filterType = button.dataset.filter;
+          render();
+        });
+      });
+    }
+
+    function renderMatrix(model) {
+      const table = document.getElementById("matrix-table");
+      const visibleTags = filterType === "全部" ? model.tags : model.tags.filter(tag => tagTypes[filterType]?.(tag));
+      const head = `
+        <thead>
+          <tr>
+            <th>标签</th>
+            ${model.dates.map(date => `<th>${escapeHtml(date)}</th>`).join("")}
+            <th style="text-align:right">频次</th>
+          </tr>
+        </thead>`;
+      const body = `
+        <tbody>
+          ${visibleTags.map(tag => `
+            <tr>
+              <td>${escapeHtml(tag)}</td>
+              ${model.dates.map(date => {
+                const indexes = model.matrix[tag + "|" + date] || [];
+                const entries = indexes.map(index => data[index]);
+                const attitude = dominantAttitude(entries);
+                if (!attitude) return `<td><div class="empty-cell"></div></td>`;
+                const cfg = attitudeConfig[attitude] || attitudeConfig["中性"];
+                const selectedClass = selected && selected.tag === tag && selected.date === date ? " selected-cell" : "";
+                const title = entries.map(entry => entry.summary).join("\\n");
+                return `<td><div class="matrix-cell${selectedClass}" data-tag="${escapeHtml(tag)}" data-date="${escapeHtml(date)}" title="${escapeHtml(title)}" style="background:${cfg.color}"></div></td>`;
+              }).join("")}
+              <td style="text-align:right;color:#64748b">${model.tagFreq[tag]}</td>
+            </tr>
+          `).join("")}
+        </tbody>`;
+      table.innerHTML = head + body;
+      table.querySelectorAll(".matrix-cell").forEach(cell => {
+        cell.addEventListener("click", () => {
+          const tag = cell.dataset.tag;
+          const date = cell.dataset.date;
+          const indexes = model.matrix[tag + "|" + date] || [];
+          selected = selected && selected.tag === tag && selected.date === date ? null : { tag, date, entries: indexes.map(index => data[index]) };
+          render();
+        });
+      });
+    }
+
+    function renderChanges(model) {
+      document.getElementById("change-title").textContent = `变化提示 · ${model.dates[model.dates.length - 1] || "-"}`;
+      const sections = [
+        ["首次出现", model.changes.newTags, "#34d399", "rgba(52,211,153,0.12)"],
+        ["持续关注", model.changes.persistent, "#60a5fa", "rgba(96,165,250,0.12)"],
+        ["淡出视野", model.changes.disappeared, "#a78bfa", "rgba(167,139,250,0.12)"],
+      ];
+      const parts = sections.filter(([, list]) => list.length).map(([title, list, color, bg]) => `
+        <div class="change-section">
+          <div class="change-title" style="color:${color}">● ${title}</div>
+          ${list.map(tag => `<span class="badge" style="background:${bg};color:${color}">${escapeHtml(tag)}</span>`).join("")}
+        </div>
+      `);
+      if (model.changes.attitudeChanged.length) {
+        parts.push(`
+          <div class="change-section">
+            <div class="change-title" style="color:#fb923c">● 态度转向</div>
+            ${model.changes.attitudeChanged.map(item =>
+              `<div style="font-size:11px;line-height:1.8"><span class="badge" style="background:rgba(251,146,60,0.12);color:#fb923c">${escapeHtml(item.tag)}</span> <span style="color:#64748b">${escapeHtml(item.from)} → ${escapeHtml(item.to)}</span></div>`
+            ).join("")}
+          </div>
+        `);
+      }
+      document.getElementById("changes").innerHTML = parts.length ? parts.join("") : `<p style="font-size:12px;color:#64748b">数据不足，需至少 3 天。</p>`;
+    }
+
+    function renderDetail() {
+      const panel = document.getElementById("detail-panel");
+      if (!selected) {
+        panel.hidden = true;
+        return;
+      }
+      panel.hidden = false;
+      document.getElementById("detail-title").textContent = `${selected.tag} · ${selected.date}`;
+      document.getElementById("detail-grid").innerHTML = selected.entries.map(entry => {
+        const cfg = attitudeConfig[entry.attitude] || attitudeConfig["中性"];
+        return `
+          <article class="detail-card">
+            <div class="summary-line">
+              <span>${escapeHtml(entry.summary)}</span>
+              <span class="attitude-pill" style="background:${cfg.bg};color:${cfg.color}">${escapeHtml(entry.attitude)}</span>
+            </div>
+            <div class="original"><span style="display:block;color:#64748b;margin-bottom:4px">原文摘录</span>${escapeHtml(entry.original)}</div>
+            <div class="tag-list">${entry.tags.map(tag => `<span>${escapeHtml(tag)}</span>`).join("")}</div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function parseExcel(workbook) {
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const header = rows[0] || [];
+      const index = name => header.indexOf(name);
+      const iG = index("原文摘录");
+      const iH = index("精简观点");
+      const iI = index("态度");
+      const iJ = index("标签");
+      const iK = index("时间");
+      if ([iG, iH, iI, iJ, iK].some(i => i < 0)) return null;
+
+      const entries = [];
+      for (let r = 1; r < rows.length; r++) {
+        const row = rows[r] || [];
+        if (!row[iK] || !row[iJ]) continue;
+        const tags = String(row[iJ]).match(/#[^\s#]+/g) || [];
+        if (!tags.length) continue;
+        entries.push({
+          date: String(row[iK]),
+          original: String(row[iG] || ""),
+          summary: String(row[iH] || ""),
+          attitude: String(row[iI] || "中性"),
+          tags
+        });
+      }
+      return entries.length ? entries : null;
+    }
+
+    function bindUpload() {
+      const input = document.getElementById("file-input");
+      const message = document.getElementById("upload-msg");
+      input.addEventListener("change", event => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!window.XLSX) {
+          message.innerHTML = `<span class="warning">Excel 解析库未加载。请联网打开，或先看内置 demo。</span>`;
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = evt => {
+          try {
+            const workbook = XLSX.read(evt.target.result, { type: "array" });
+            const parsed = parseExcel(workbook);
+            if (!parsed) {
+              message.innerHTML = `<span class="warning">未找到匹配字段：原文摘录、精简观点、态度、标签、时间。</span>`;
+              return;
+            }
+            data = parsed;
+            selected = null;
+            message.textContent = `已加载 ${parsed.length} 条记录`;
+            render();
+          } catch (error) {
+            message.innerHTML = `<span class="warning">文件解析失败。</span>`;
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    function render() {
+      const model = getModel();
+      document.getElementById("stats").textContent = `${model.dates.length} 个交易日 · ${data.length} 条观点 · ${model.tags.length} 个标签`;
+      renderLegend();
+      renderFilters();
+      renderMatrix(model);
+      renderChanges(model);
+      renderDetail();
+    }
+
+    document.getElementById("close-detail").addEventListener("click", () => {
+      selected = null;
+      render();
+    });
+    bindUpload();
+    render();
+  </script>
+</body>
+</html>
